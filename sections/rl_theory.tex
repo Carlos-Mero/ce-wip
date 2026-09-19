@@ -1,58 +1,113 @@
 \section{Distribution Drift of RL Target}
 
+\subsection{Variance Accumulation in RL}
+
 While the entropy collapse is widely observed in RL scenarios, previous experiments could provide certain evidence that the variance accumulation is one of the major causes of this phenomena in RL. Another important side evidence of the variance impact in RL is the advantage estimation methods adopted in PPO~\citep{schulman_proximal_2017}, GRPO~\citep{shao_deepseekmath_2024}, or RLOO~\citep{ahmadian_back_2024}. These methods can significantly lower down the variance of the estimator in RL algorithms while maintaining the expectation form objective. This can notably increase the stability of LLM training, while our deduction further indicates that they are can also prevent potential entropy collapse of the target distribution. It remains open if we could find better methods in controling the estimattion variance.
 
 % TODO Ablation experiments on advantage estimation methods.
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=\linewidth]{media/conditional_kl_comparison.pdf}
+  \caption{Ablation study on the impact of advantage estimation methods. We can see that under the same RL setting, advantage estimation methods constantly lowers the entropy deduction, while the accuracy on the training set is not severely affected during these training steps.}
+  \label{fig:ablation-ae-rl}
+\end{figure}
 
-% TODO Variance experiments on Imagenet
+Iterative self-distillation and RL share some properties as iterative learning algorithms, while RL still exhibit some other unique behavior which we can work on. In this section we will primarily study the property of RL with binary reward.
 
-self-distillation training and RL share some properties such as variance accumulation since they are both iterative learning algorithms, while RL still exhibit some other unique behavior which we can work on. In this section we will primarily study the property of RL with binary reward.
+\subsection{Conditional Decomposition in RL}
 
-A key distinction is that RL can have a nonzero mean gradient because its success-conditioned target differs from the current policy. When failures have at least as much conditional entropy as successes, this target has strictly lower entropy than the policy. This condition is reasonable since we typically have more ways to obtain a flawed answer than a correct one.
+A sequence-level binary reward naturally decomposes the probability distribution induced by the original model into two components, with the success-conditioned distribution serving as the target distribution. The policy entropy also decomposes into the binary entropy of correctness and an accuracy-weighted average of the true and false conditional entropies.
 
-\begin{lemma}[Lower entropy of the success-conditioned target]
+\begin{lemma}[Accuracy-weighted entropy decomposition]
 \label{lem:rl-target-entropy}
-For a prompt $x$ with $0<\rho_\theta(x)<1$, let $\pi_\theta^-$ denote the failure-conditioned distribution. If
-$H(\pi_\theta^-(\cdot\mid x))\ge H(\pi_\theta^+(\cdot\mid x))$, then
+For a prompt $x$ with deterministic binary rewards, write $\rho=\rho_\theta(x)\in(0,1)$ for the accuracy and suppress conditioning on $x$. Let $H(\pi_\theta^+)$ and $H(\pi_\theta^-)$ denote the true (success-conditioned) and false (failure-conditioned) entropies, respectively. Then
 \begin{equation}
- H(\pi_\theta^+(\cdot\mid x))<H(\pi_\theta(\cdot\mid x)).
- \label{eq:rl-target-entropy}
+ H(\pi_\theta)=h_{\mathrm b}(\rho)
+    +\rho H(\pi_\theta^+)+(1-\rho)H(\pi_\theta^-),
+ \label{eq:rl-entropy-decomposition}
 \end{equation}
+where $h_{\mathrm b}(\rho)=-\rho\log\rho-(1-\rho)\log(1-\rho)$.
+If $H(\pi_\theta^+)<H(\pi_\theta^-)$, increasing accuracy while keeping both conditional distributions fixed will decrease their weighted average entropy.
 \end{lemma}
 \noindent\hyperref[app:rl-target-entropy]{Proof: Appendix~\ref*{app:rl-target-entropy}.}
 
-This gives another cause on the entropy decrement in RL, which does not seem harmful. One important reason why we are concerning the entropy collapse in RL is that, this usually indicates collapse in diversity and the potential performance gains. We contend that this degeneration is primarily caused by the drift of the target distribution, instead of the general entropy decrement. This distribution drift could come from the variance accumulation discussed in \hyperref[sec:variance-accumulation]{Section~\ref*{sec:variance-accumulation}}, and in RL there is another first-order term introduced by nonzero mean gradient.
+In the practically relevant regime where both conditional entropies are much larger than the binary entropy $h_{\mathrm b}(\rho)\le\log 2$, the total entropy is well approximated by their accuracy-weighted average. This conditional is supported in our experiments, see Figure~\ref{fig:kl-ckl-comparison}. Both conditional entropies are significantly larger than the binary entropy, while false conditional entropy is several times higher than true conditional entropy.
 
-We characterize this term for one SGD update of a frozen-feature softmax readout at a fixed prefix $s$. Write $p_i=\pi_{W_0}(i\mid s)$ and $\varepsilon=\eta\|\phi(s)\|_2^2$. For a token subset $\mathcal S$ with equal expected advantage $A_i=a>0$, let $P_{\mathcal S}=\sum_{i\in\mathcal S}p_i$ and $q_i=p_i/P_{\mathcal S}$. With deterministic binary token rewards, $\mathcal S$ can be the success set, so $q$ is the success-conditioned target and $a=1-P_{\mathcal S}$.
+This property can, to some extent, account for the approximately linear relationship between entropy and accuracy observed in prior studies~\citep{cui_entropy_2025}. However, a mere shift in probability density is insufficient to explain the reductions in diversity and pass@k performance reported in other studies~\citep{yue_does_2025, tajwar_maximum_2026}. This accuracy-driven source of entropy reduction in RL need not reflect a loss of diversity among correct responses. The concern with diversity collapse is the degeneration of the success-conditioned target and conditional entropy. In RL, entropy is only compariable when models exhibit similar sample accuracy.
 
-\begin{lemma}[First-order concentration under REINFORCE]
-\label{lem:rl-conditional-drift}
-Under this setup, a REINFORCE update gives
+This conditional decomposition induced by RL training also offers a new perspective on regularization. To prevent model collapse and preserve generalization, a common practice is to introduce a KL-divergence constraint that keeps the trained model from deviating excessively from the original model~\citep{schulman_trust_2017, schulman_proximal_2017, ouyang_training_2022}. However, directly constraining the KL divergence can also limit improvements in reward. Under the conditional decomposition of RL, what we truly need to control is the degradation of the target distribution. This observation motivates a Conditional KL (CKL) regularization scheme that directly constrains changes in the target distribution.
+
+This CKL regularization admits a simple policy-gradient estimator:
+
+\begin{insight}
+The mean log probability-ratio between the current and reference models over positive samples captures the average probability gain on correct solutions. CKL then regularizes only the deviation of each positive sample from this average gain. This actually introduces a baseline into the KL penalty for positive samples, while imposing no constraint on negative samples.
+\end{insight}
+
+\begin{theorem}[Centered sequence-$k_1$ estimator for CKL]
+\label{thm:ckl-estimator}
+Fix a prompt $x$ and suppress its conditioning. Let $\pi_\theta$ be a differentiable positive policy and $\pi_{\mathrm{ref}}$ a fixed reference. Define
+$K(\theta)=D_{\mathrm{KL}}(\pi_\theta^+\Vert\pi_{\mathrm{ref}}^+)$.
+Draw $G$ independent responses $Y_i\sim\pi_{\theta_0}$, and let
+$I^+=\{i:r(x,Y_i)=1\}$ and $N=|I^+|$. The empirical signal is
+\begin{align}
+ d_i&=\log\frac{\pi_{\theta_0}(Y_i)}{\pi_{\mathrm{ref}}(Y_i)}
+ =\sum_t\log\frac{\pi_{\theta_0}(Y_{i,t}\mid x,Y_{i,<t})}
+                        {\pi_{\mathrm{ref}}(Y_{i,t}\mid x,Y_{i,<t})},\notag\\
+ \widehat c_i&=
+ \begin{cases}
+ d_i-\dfrac{1}{N}\sum_{j\in I^+}d_j,&i\in I^+,\ N\ge2,\\
+ 0,&\text{otherwise}.
+ \end{cases}
+ \label{eq:ckl-empirical-signal}
+\end{align}
+Writing $s_i=\left.\nabla_\theta\log\pi_\theta(Y_i)\right|_{\theta_0}$,
+the estimator satisfies, for every $n$ with $\Pr(N=n)>0$,
 \begin{equation}
- \mathbb E[\Delta q_i]
- =\varepsilon aP_{\mathcal S}q_i(q_i-M_2)+O(\varepsilon^2),
- \qquad M_2=\sum_{j\in\mathcal S}q_j^2.
- \label{eq:rl-conditional-drift}
+ \mathbb E\!\left[\left.\frac1G\sum_{i=1}^G\widehat c_i s_i\,\right|N=n\right]
+ =\frac{\max(n-1,0)}{G}\left.\nabla_\theta K(\theta)\right|_{\theta_0}.
+ \label{eq:ckl-finite-gradient}
 \end{equation}
-Tokens with $q_i>M_2$ gain conditional probability at first order. The first-order change in $H(q)$ is strictly negative unless $q$ is uniform, despite all tokens in $\mathcal S$ having equal expected advantage.
-\end{lemma}
-\noindent\hyperref[app:dynamics-reinforce]{Proof: Appendix~\ref*{app:dynamics-reinforce}, Lemma~\ref*{lem:dyn-reinforce}.}
+Thus a detached reward $-\beta\widehat c_i$, with $\beta\ge0$, gives an expected policy-gradient contribution proportional to the negative success-conditioned KL gradient. The signal is invariant to adding a common constant to all successful responses' log-ratios.
+\end{theorem}
+\noindent\hyperref[app:ckl-estimator]{Proof: Appendix~\ref*{app:ckl-estimator}.}
 
-Related difficulties arise in classical RL, where policies can stall near suboptimal solutions. Log-barrier regularization helps maintain updates to low-probability actions and hence preserves the diversity~\citep{agarwal_theory_2020}. Under the same readout model, adding an inverse-probability correction with a constant signal cancels the first-order drift within $\mathcal S$.
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=\linewidth]{media/conditional_kl_comparison.pdf}
+  \caption{The comparison of KL and Conditional KL (CKL) regularization in RL. We trained Qwen3-1.7B-Base~\citep{yang_qwen3_2025} on MATH~\citep{hendrycks_measuring_2021} dataset with GRPO~\citep{shao_deepseekmath_2024} algorithm and different KL penalities. Two conditional entropies are measured on the sequence level. We can see that strong KL control strength severely limits the reward increment in RL, while CKL regularization allows the model to obtain higher reward while maintaining the diversity of true samples.}
+  \label{fig:kl-ckl-comparison}
+\end{figure}
 
-\begin{lemma}[First-order drift cancellation under normed-ls]
-\label{lem:rl-drift-cancellation}
-Under the same setup, adding the detached correction $a/(Vp_Y)$ to the sampled advantage in the REINFORCE loss gives normed-ls, where $V$ is the vocabulary size. This cancels the first-order expected drift of both the conditional distribution and its entropy:
-\begin{equation}
- \mathbb E[\Delta q_i]=O(\varepsilon^2),
- \qquad \mathbb E[\Delta H(q)]=O(\varepsilon^2).
- \label{eq:rl-drift-cancellation}
-\end{equation}
-\end{lemma}
-\noindent\hyperref[app:dynamics-normed-ls]{Proof: Appendix~\ref*{app:dynamics-normed-ls}, Lemma~\ref*{lem:dyn-normed-ls}.}
+As shown in Figure~\ref{fig:kl-ckl-comparison}, we indeed observe that CKL regularization effectively relaxes the constraint imposed by standard KL regularization on accuracy improvements while preserving the positive conditional entropy. Although CKL cannot achieve completely lossless regularization due to cross-sequence interactions induced by model parameterization, it nevertheless demonstrates substantial practical value.
 
-Note that this cancellation concerns the first-order mean drift; finite-step sampling noise can still change the conditional distribution and its entropy. The strict cancellation requires accurate estimation of per-token advantage, which is generally inaccessible in practice. So in the following experiments we used a simplified version of normed-ls method, using a constant to replace the advantage weight in the theoretical implementation. It already exhibits certain advantage over GRPO and MaxRL in experiments, while its performance equipped with a value model remains to be explored.
+% We characterize this term for one SGD update of a frozen-feature softmax readout at a fixed prefix $s$. Write $p_i=\pi_{W_0}(i\mid s)$ and $\varepsilon=\eta\|\phi(s)\|_2^2$. For a token subset $\mathcal S$ with equal expected advantage $A_i=a>0$, let $P_{\mathcal S}=\sum_{i\in\mathcal S}p_i$ and $q_i=p_i/P_{\mathcal S}$. With deterministic binary token rewards, $\mathcal S$ can be the success set, so $q$ is the success-conditioned target and $a=1-P_{\mathcal S}$.
+%
+% \begin{lemma}[First-order concentration under REINFORCE]
+% \label{lem:rl-conditional-drift}
+% Under this setup, a REINFORCE update gives
+% \begin{equation}
+%  \mathbb E[\Delta q_i]
+%  =\varepsilon aP_{\mathcal S}q_i(q_i-M_2)+O(\varepsilon^2),
+%  \qquad M_2=\sum_{j\in\mathcal S}q_j^2.
+%  \label{eq:rl-conditional-drift}
+% \end{equation}
+% Tokens with $q_i>M_2$ gain conditional probability at first order. The first-order change in $H(q)$ is strictly negative unless $q$ is uniform, despite all tokens in $\mathcal S$ having equal expected advantage.
+% \end{lemma}
+% \noindent\hyperref[app:dynamics-reinforce]{Proof: Appendix~\ref*{app:dynamics-reinforce}, Lemma~\ref*{lem:dyn-reinforce}.}
+%
+% Related difficulties arise in classical RL, where policies can stall near suboptimal solutions. Log-barrier regularization helps maintain updates to low-probability actions and hence preserves the diversity~\citep{agarwal_theory_2020}. Under the same readout model, adding an inverse-probability correction with a constant signal cancels the first-order drift within $\mathcal S$.
+%
+% \begin{lemma}[First-order drift cancellation under normed-ls]
+% \label{lem:rl-drift-cancellation}
+% Under the same setup, adding the detached correction $a/(Vp_Y)$ to the sampled advantage in the REINFORCE loss gives normed-ls, where $V$ is the vocabulary size. This cancels the first-order expected drift of both the conditional distribution and its entropy:
+% \begin{equation}
+%  \mathbb E[\Delta q_i]=O(\varepsilon^2),
+%  \qquad \mathbb E[\Delta H(q)]=O(\varepsilon^2).
+%  \label{eq:rl-drift-cancellation}
+% \end{equation}
+% \end{lemma}
+% \noindent\hyperref[app:dynamics-normed-ls]{Proof: Appendix~\ref*{app:dynamics-normed-ls}, Lemma~\ref*{lem:dyn-normed-ls}.}
+%
+% Note that this cancellation concerns the first-order mean drift; finite-step sampling noise can still change the conditional distribution and its entropy. The strict cancellation requires accurate estimation of per-token advantage, which is generally inaccessible in practice. So in the following experiments we used a simplified version of normed-ls method, using a constant to replace the advantage weight in the theoretical implementation. It already exhibits certain advantage over GRPO and MaxRL in experiments, while its performance equipped with a value model remains to be explored.
 
 % TODO Experiments of normed-ls
-
-

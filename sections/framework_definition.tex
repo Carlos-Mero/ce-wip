@@ -30,29 +30,30 @@ For SFT, let $x$ denote a prompt and $y$ its target response, with fixed
 empirical joint distribution $p_{\mathcal{D}}(x,y)$. The same decomposition
 holds conditionally:
 
-\begin{equation}
- \underbrace{-\mathbb{E}_{(x,y)\sim p_{\mathcal{D}}}
- [\log\pi_\theta(y\mid x)]}_{\mathcal{L}_{\mathrm{SFT}}(\theta)}
- =\mathbb{E}_{x\sim p_{\mathcal{D}}}
+\begin{align}
+  \mathcal{L}_{\mathrm{SFT}}(\theta) &= 
+  -\mathbb{E}_{(x,y)\sim p_{\mathcal{D}}}
+  [\log\pi_\theta(y\mid x)]\\
+  &=\mathbb{E}_{x\sim p_{\mathcal{D}}}
  \left[D_{\mathrm{KL}}\bigl(p_{\mathcal{D}}(\cdot\mid x)
  \Vert\pi_\theta(\cdot\mid x)\bigr)\right]
  +H_{p_{\mathcal{D}}}(Y\mid X),
  \label{eq:sft-conditional-kl}
-\end{equation}
+\end{align}
 
 Under the autoregressive factorization,
 $-\log\pi_\theta(y\mid c)=-\sum_{t=1}^{|y|}
 \log\pi_\theta(y_t\mid c,y_{<t})$, this sequence-level objective is exactly the sum of token-level
 cross-entropies with ground-truth prefixes.
 
-In many applications the response could come from a teacher model $pi_t$, instead of the dataset. Then the training objective of SFT would become minimizing the forward KL divergence between the teacher model and the student model. This yields the classical Knowledge-Distillation (KD) algorithm:
+In many applications the response could come from a teacher model $\pi_t$, instead of the dataset. Then the training objective of SFT would become minimizing the forward KL divergence between the teacher model and the student model. This yields the classical SFT-based Knowledge-Distillation (KD) algorithm~\citep{hinton_distilling_2015}, which is often simply called SFT as well:
 
 \begin{align}
   \mathcal{J}_{\mathrm{KD}} &= -\mathbb{E}_{x\sim\mathcal{D}} [D_{\mathrm{KL}}\bigl(\pi_t (\cdot\mid x)\Vert \pi_\theta (\cdot\mid x)\bigr)] = \mathbb{E}_{x\sim\mathcal{D}, y\sim\pi_t (\cdot\mid x)} [\log \pi_\theta (y\mid x)] - H(\pi_t).
   \label{eq:kl-loss}
 \end{align}
 
-OPD recently emerged as a new algorithm for distillation tasks~\citep{thinking_machines_lab_-policy_2025}. It can exhibit superior performance than KD, and received great attention from the industry~\citep{team_kimi_2026, deepseek-ai_deepseek-v4_2026, glm-5-team_glm-5_2026}. While in some cases this algorithm may also be unstable and failed to complete the distillation task~\citep{li_rethinking_2026}. The key difference between OPD and KD is that, OPD uses sequence-level reverse KL divergence as the training objective:
+OPD recently emerged as a new algorithm for distillation tasks~\citep{thinking_machines_lab_-policy_2025}. It can exhibit superior performance than SFT in some cases, and received great attention from the industry~\citep{team_kimi_2026, deepseek-ai_deepseek-v4_2026, glm-5-team_glm-5_2026}. While in some cases this algorithm may also be unstable and failed to complete the distillation task~\citep{li_rethinking_2026}. The key difference between OPD and KD is that, OPD uses sequence-level reverse KL divergence as the training objective:
 
 \begin{align}
   \mathcal{J}_{\mathrm{OPD}} &= -\mathbb{E}_{x\sim\mathcal{D}} [D_{\mathrm{KL}}\bigl(\pi_\theta (\cdot\mid x)\Vert \pi_t (\cdot\mid x)\bigr)]
@@ -60,7 +61,7 @@ OPD recently emerged as a new algorithm for distillation tasks~\citep{thinking_m
   \label{eq:opd-loss}
 \end{align}
 
-The on policy nature of OPD directly come from the requirement of reverse KL divergence. As the expectation of reverse KL is calculated under the student model, we should use the student to generate samples. We should note that the sequence-level KL objective directly yields sampled-token OPD. While there exist several theoretically equivalent variants of this algorithm~\citep{li_rethinking_2026}, this sampled-token OPD is indeed adopted by the industry~\citep{team_kimi_2026} and the following analysis will primarily be built upon this algorithm.
+The on policy nature of OPD directly come from the requirement of reverse KL divergence. As the expectation of reverse KL is calculated under the student distribution, we should use the student to generate samples. We should note that the sequence-level KL objective directly yields sampled-token OPD. While there exist several variants of this OPD~\citep{li_rethinking_2026}, this sampled-token OPD is indeed adopted by the industry~\citep{team_kimi_2026} and share some important properties with other variants. the following analysis will primarily be built upon this algorithm.
 
 \subsection{Reinforce Learning Algorithms}
 
@@ -154,7 +155,7 @@ SFT &
 $\mathbb E_{y\sim p_{\mathcal D}(\cdot\mid x)}[\log\pi_\theta(y\mid x)]$ &
 $p_{\mathcal D}(y\mid x)$ & \forwardKL \\
 \addlinespace[3pt]
-KD &
+SFT-based KD &
 $\mathbb E_{y\sim\pi_t(\cdot\mid x)}[\log\pi_\theta(y\mid x)]$ &
 $\pi_t(y\mid x)$ & \forwardKL \\
 OPD &

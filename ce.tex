@@ -12,7 +12,7 @@
 \usepackage{url}
 \usepackage{graphicx}
 \usepackage{amsthm,needspace}
-\usepackage{booktabs,tabularx,placeins}
+\usepackage{booktabs,tabularx,multirow,placeins}
 \usepackage[table]{xcolor}
 \usepackage[most]{tcolorbox}
 \newtheorem{lemma}{Lemma}[section]
@@ -141,16 +141,19 @@ These results provide a theoretical explanation, at least in part, for the long-
 \clearpage
 \appendix
 \numberwithin{equation}{section}
+\input{sections/related_work}
 \input{appendices/reward_reweighting}
 \input{appendices/conditional_kl_maxrl}
 \input{appendices/proximal_gradient_noise}
 \input{appendices/distal_gradient_variance}
-\input{appendices/self-distillation}
 \input{appendices/variance_accumulation}
 \input{appendices/rl_target_entropy}
-\input{appendices/token_learning_dynamics}
+\input{appendices/ckl_estimator}
+% \input{appendices/token_learning_dynamics}
 
+\input{appendices/self-distillation}
 \input{appendices/supplimentary_exps_ISD}
+\input{appendices/supp_exps_rl}
 
 
 \end{document}

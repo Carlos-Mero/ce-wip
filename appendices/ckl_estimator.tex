@@ -1,0 +1,62 @@
+\section{Proof of the Conditional KL Estimator}
+\label{app:ckl-estimator}
+
+\begin{insight}
+On successful responses, the sequence log-ratio is the sum of a
+success-probability log-ratio and a conditional-distribution log-ratio.
+Centering within successes removes the former exactly. Multiplying the
+remaining signal by the policy score gives the conditional-KL gradient.
+Using the same samples to estimate the mean introduces a finite-group
+scaling factor, with zero signal for groups containing fewer than two successes.
+\end{insight}
+
+Fix a prompt $x$ and a finite response space with a deterministic binary
+reward and a nonempty success set $\mathcal S^+$.
+Write $p_\theta=\pi_\theta(\cdot\mid x)$, $p=p_{\theta_0}$,
+$q=\pi_{\mathrm{ref}}(\cdot\mid x)$, $\rho_\theta=p_\theta(\mathcal S^+)$,
+$\rho=\rho_{\theta_0}$, and $\rho_q=q(\mathcal S^+)$.
+Assume $p_\theta$ is differentiable and both $p_\theta$ and $q$ are positive.
+Superscript $+$ denotes conditioning on $\mathcal S^+$;
+all gradients below are evaluated at $\theta_0$.
+
+\begin{proof}[Proof of Theorem~\ref{thm:ckl-estimator}]
+Let $d(y)=\log(p(y)/q(y))$, $\mu=\mathbb E_{p^+}[d(Y)]$, and
+$K(\theta)=D_{\mathrm{KL}}(p_\theta^+\Vert q^+)$.
+For $y\in\mathcal S^+$,
+\begin{equation}
+ d(y)=\log\frac{\rho}{\rho_q}+\log\frac{p^+(y)}{q^+(y)},
+ \qquad
+ d(y)-\mu=\log\frac{p^+(y)}{q^+(y)}-K(\theta_0).
+ \label{eq:ckl-log-ratio-decomposition}
+\end{equation}
+The scores $s=\nabla\log p_\theta$ and $s^+=\nabla\log p_\theta^+$ satisfy
+$s=s^++\nabla\log\rho_\theta$ on $\mathcal S^+$ and
+$\mathbb E_{p^+}[s^+]=0$. Hence
+\begin{align}
+ \nabla K
+ &=\mathbb E_{p^+}\!\left[
+ s^+(Y)\left(\log\frac{p^+(Y)}{q^+(Y)}+1\right)\right]\notag\\
+ &=\mathbb E_{p^+}[s^+(Y)(d(Y)-\mu)]
+  =\mathbb E_{p^+}[s(Y)(d(Y)-\mu)].
+ \label{eq:ckl-conditional-gradient}
+\end{align}
+
+Conditional on $N=n\ge2$, relabel the successful responses as
+$Y_1,\ldots,Y_n\overset{\mathrm{iid}}{\sim}p^+$.
+Set $\bar d=n^{-1}\sum_{j=1}^n d(Y_j)$,
+$a=\mathbb E_{p^+}[d(Y)s(Y)]$, and $b=\mathbb E_{p^+}[s(Y)]$.
+Independence gives
+\begin{align}
+ \mathbb E[\bar d\,s(Y_i)\mid N=n]
+ &=\frac{a}{n}+\frac{n-1}{n}\mu b,\notag\\
+ \mathbb E[(d(Y_i)-\bar d)s(Y_i)\mid N=n]
+ &=\frac{n-1}{n}(a-\mu b)
+  =\frac{n-1}{n}\nabla K.
+ \label{eq:ckl-sample-centering-factor}
+\end{align}
+Summing over the $n$ successes and dividing by $G$ proves
+Eq.~\eqref{eq:ckl-finite-gradient}; for $n\le1$, both sides are zero.
+Multiplication by $-\beta$ gives the stated expected gradient contribution.
+Finally, $(d_i+a_0)-(\bar d+a_0)=d_i-\bar d$ proves invariance
+under a common shift of the successful log-ratios.
+\end{proof}

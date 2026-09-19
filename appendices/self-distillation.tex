@@ -144,16 +144,16 @@ GRPO-200, compared with 16.78, 19.81, and 26.07 for SFT.
 These observations are consistent with a local advantage of
 OPD, although the single-seed results do not establish statistical
 significance or directly test the gradient-variance ordering.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\linewidth]{media/selfdist_proximal.pdf}
-\caption{Distillation from the three GRPO-trained Qwen3 teachers.
-OPD rewards measure current student rollout correctness; SFT rewards
-measure cached teacher-response correctness, rather than SFT student
-performance. Each panel uses Qwen3-1.7B-Base as the initial student.}
-\label{fig:distillation-proximal}
-\end{figure}
+%
+% \begin{figure}[htbp]
+% \centering
+% \includegraphics[width=\linewidth]{media/selfdist_proximal.pdf}
+% \caption{Distillation from the three GRPO-trained Qwen3 teachers.
+% OPD rewards measure current student rollout correctness; SFT rewards
+% measure cached teacher-response correctness, rather than SFT student
+% performance. Each panel uses Qwen3-1.7B-Base as the initial student.}
+% \label{fig:distillation-proximal}
+% \end{figure}
 
 \FloatBarrier
 
@@ -163,22 +163,19 @@ Figure~\ref{fig:distillation-distal} compares two students trained
 with the JustRL teacher. The R1-Distill-1.5B student starts at a mean
 benchmark score of 53.56, compared with 72.27 for the teacher. Both
 methods reach scores close to the teacher: SFT and OPD scores
-are 72.94 and 72.04, respectively. Thus this setting does not exhibit
-a clear failure of OPD.
+are 72.94 and 72.04, respectively. Under this setting both algorithms remain stable, while SFT is already slightly more performant.
 
 The Qwen2.5-Math-1.5B student starts substantially lower, at 15.27.
 Its OPD rollout correctness decreases early and remains low over the
 displayed interval, whereas SFT reaches an evaluation score of
-47.46. No evaluation is available for the failed OPD run. We leave its results
-unreported rather than assigning a zero benchmark score.
+47.46.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{media/selfdist_distal.pdf}
-\caption{Distillation with the JustRL teacher and two initial students.
+\caption{Reward curve of distal OPD with the JustRL teacher and two initial students.
 OPD rollout correctness increases for R1-Distill-1.5B but decreases
-and remains low for Qwen2.5-Math-1.5B. The identical SFT curves in the
-two panels reflect reuse of the same teacher-response cache; student
+and remains low for Qwen2.5-Math-1.5B. Note that since we do not have student's on policy samples in SFT, we can not draw a similar reward curve for SFT. Their
 evaluation results are reported in
 Table~\ref{tab:distillation-performance}.}
 \label{fig:distillation-distal}
@@ -199,47 +196,65 @@ establish that a large performance gap alone implies OPD instability.
 
 \begin{table}[htbp]
 \centering
+\caption{Evaluation results of OPD and SFT with 16 sampled responses per problem. We can see that OPD typically outperforms SFT in proximal distillation, while it may experience severe instability issue in distal distillation.}
+\label{tab:distillation-performance}
+\vspace{5pt}
+\begingroup
 \small
 \setlength{\tabcolsep}{5pt}
-\begin{tabular}{llrrrr}
-\toprule
-Setting & Model & AIME-24 & AMC23 & MATH500 & Mean \\
+\renewcommand{\arraystretch}{1.45}
+% Match the main table's group headings, spanning all seven columns here.
+\newcommand{\distillationgroup}[1]{%
+  \specialrule{\lightrulewidth}{2pt}{0pt}%
+  \multicolumn{7}{l}{\textcolor{frameworkink}{\textbf{#1}}}\\%
+  \specialrule{\lightrulewidth}{0pt}{2pt}}
+% Account for the partial rule when vertically centering each four-row cell.
+\newcommand{\distillationcell}[2]{%
+  \multirow[c]{4}{#1}[-\dimexpr(\aboverulesep+\belowrulesep+\cmidrulewidth)/2\relax]{#2}}
+% Shift Teacher left by transferring 8pt of width from Student to its right padding.
+  \begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X l<{\hspace{14pt}} l r r r r}
+\specialrule{\heavyrulewidth}{0pt}{0pt}
+\rowcolor{frameworktint}
+\textcolor{frameworkink}{\textbf{Student}} &
+\textcolor{frameworkink}{\textbf{Teacher}} &
+\textcolor{frameworkink}{\textbf{Model}} &
+\textcolor{frameworkink}{\textbf{AIME-24}} &
+\textcolor{frameworkink}{\textbf{AMC23}} &
+\textcolor{frameworkink}{\textbf{MATH500}} &
+\textcolor{frameworkink}{\textbf{Mean}} \\
+\distillationgroup{Proximal Distillation}
+\distillationcell{=}{Qwen3-1.7B-Base} & \distillationcell{*}{GRPO-50} & Student & 0.62 & 7.50 & 16.19 & 8.10 \\
+ & & Teacher & 1.04 & 12.19 & 25.62 & 12.95 \\
+\cmidrule(l){3-7}
+ & & SFT & \textbf{1.88} & \underline{15.78} & \underline{32.69} & \underline{16.78} \\
+ & & OPD & \underline{1.25} & \textbf{16.25} & \textbf{35.80} & \textbf{17.77} \\
 \midrule
-GRPO-50 & Base & 0.62 & 7.50 & 16.19 & 8.10 \\
- & Teacher & 1.04 & 12.19 & 25.62 & 12.95 \\
- & SFT & \textbf{1.88} & \underline{15.78} & \underline{32.69} & \underline{16.78} \\
- & OPD & \underline{1.25} & \textbf{16.25} & \textbf{35.80} & \textbf{17.77} \\
+\distillationcell{=}{Qwen3-1.7B-Base} & \distillationcell{*}{GRPO-100} & Student & 0.62 & 7.50 & 16.19 & 8.10 \\
+ & & Teacher & \textbf{1.67} & \underline{18.28} & 33.50 & 17.82 \\
+\cmidrule(l){3-7}
+ & & SFT & \underline{1.04} & \textbf{19.06} & \underline{39.32} & \underline{19.81} \\
+ & & OPD & 0.62 & \textbf{19.06} & \textbf{42.58} & \textbf{20.75} \\
 \midrule
-GRPO-100 & Base & 0.62 & 7.50 & 16.19 & 8.10 \\
- & Teacher & \textbf{1.67} & \underline{18.28} & 33.50 & 17.82 \\
- & SFT & \underline{1.04} & \textbf{19.06} & \underline{39.32} & \underline{19.81} \\
- & OPD & 0.62 & \textbf{19.06} & \textbf{42.58} & \textbf{20.75} \\
+\distillationcell{=}{Qwen3-1.7B-Base} & \distillationcell{*}{GRPO-200} & Student & 0.62 & 7.50 & 16.19 & 8.10 \\
+ & & Teacher & 2.50 & 22.50 & 46.27 & 23.76 \\
+\cmidrule(l){3-7}
+ & & SFT & \textbf{3.33} & \underline{25.16} & \underline{49.73} & \underline{26.07} \\
+ & & OPD & \underline{2.92} & \textbf{25.62} & \textbf{51.36} & \textbf{26.63} \\
+\distillationgroup{Distal Distillation}
+\distillationcell{=}{R1-Distilled-Qwen-1.5B} & \distillationcell{*}{JustRL-DS} & Student & 21.04 & 63.75 & 75.90 & 53.56 \\
+ & & Teacher & \textbf{49.38} & 83.28 & 84.16 & \underline{72.27} \\
+\cmidrule(l){3-7}
+ & & SFT & \underline{47.92} & \textbf{85.16} & \textbf{85.74} & \textbf{72.94} \\
+ & & OPD & 47.29 & \underline{83.44} & \underline{85.39} & 72.04 \\
 \midrule
-GRPO-200 & Base & 0.62 & 7.50 & 16.19 & 8.10 \\
- & Teacher & 2.50 & 22.50 & 46.27 & 23.76 \\
- & SFT & \textbf{3.33} & \underline{25.16} & \underline{49.73} & \underline{26.07} \\
- & OPD & \underline{2.92} & \textbf{25.62} & \textbf{51.36} & \textbf{26.63} \\
-\midrule
-R1-Distill-1.5B & Base & 21.04 & 63.75 & 75.90 & 53.56 \\
- & Teacher & \textbf{49.38} & 83.28 & 84.16 & \underline{72.27} \\
- & SFT & \underline{47.92} & \textbf{85.16} & \textbf{85.74} & \textbf{72.94} \\
- & OPD & 47.29 & \underline{83.44} & \underline{85.39} & 72.04 \\
-\midrule
-Qwen2.5-Math-1.5B & Base & 4.38 & 18.44 & 23.00 & 15.27 \\
- & Teacher & \textbf{49.38} & \textbf{83.28} & \textbf{84.16} & \textbf{72.27} \\
- & SFT & \underline{11.88} & \underline{56.09} & \underline{74.41} & \underline{47.46} \\
- & OPD & -- & -- & -- & -- \\
+\distillationcell{=}{Qwen2.5-Math-1.5B} & \distillationcell{*}{JustRL-DS} & Student & 4.38 & 18.44 & 23.00 & 15.27 \\
+ & & Teacher & \textbf{49.38} & \textbf{83.28} & \textbf{84.16} & \textbf{72.27} \\
+\cmidrule(l){3-7}
+ & & SFT & \underline{11.88} & \underline{56.09} & \underline{74.41} & \underline{47.46} \\
+ & & OPD & -- & -- & -- & -- \\
 \bottomrule
-\end{tabular}
-\caption{Evaluation results with 16 sampled responses per problem.
-All scores are percentages; Mean is the unweighted average over the
-three benchmarks. Within each setting and metric, the highest score
-is in \textbf{bold} and the second-highest distinct score is
-\underline{underlined}, including the base and teacher references;
-ties receive the same marking. The Qwen3 base reference uses a
-4,096-token limit, while the other evaluations use 16,384 tokens.
-Dashes indicate unavailable results for the failed Qwen2.5-Math OPD run.}
-\label{tab:distillation-performance}
+\end{tabularx}
+\endgroup
 \end{table}
 
 Table~\ref{tab:distillation-performance} shows that OPD achieves a
@@ -253,10 +268,6 @@ two objectives therefore varies across teacher--student pairs.
 \begin{takeaway}
 OPD is favored in the proximal comparisons, consistent with its
 local gradient-estimation advantage, while sampled-response KD remains
-effective in the larger-gap setting where direct OPD fails. Together
-with the conditional distal analysis, these observations motivate KD
-as a cold start followed by OPD as the student approaches the teacher.
-This two-stage strategy is a practical implication of the analysis;
-its performance is not directly tested by these experiments.
+effective in the larger-gap setting where direct OPD fails.
 \end{takeaway}
 \FloatBarrier

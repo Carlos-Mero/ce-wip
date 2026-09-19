@@ -15,7 +15,7 @@ In a single training step, model entropy may randomly increase or decrease, but 
 
 These entropy curves satisfies the derivation in the main body very well. In fact the decreasing expected entropy does not guarantee the probability of decrement and increment. For example in reversed iterative self-distillation, since the punishment on samples with a high probability will raise the entropy, the entropy policy model has a high probability to be increased. However, the negative expectation indicates that once the decrement happens, the magnitude of the decrease will be substantial. This was also observed in our experiments.
 
-These experiments share this experimental setting:
+These experiments share these experimental settings:
 
 \begin{itemize}
 \item seed: 1
