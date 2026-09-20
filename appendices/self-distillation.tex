@@ -7,15 +7,15 @@ and more distant teachers.
 \subsection{Experimental settings}
 
 The proximal-limit experiment initializes both student and frozen teacher
-from Qwen3-1.7B-Base. Nearby teachers are obtained by training the same
+from Qwen3-1.7B-Base~\citep{yang_qwen3_2025}. Nearby teachers are obtained by training the same
 model with GRPO for 50, 100, or 200 steps. The distal experiments use a
-JustRL teacher with R1-Distill-1.5B and Qwen2.5-Math-1.5B students;
+JustRL teacher with R1-Distill-1.5B~\citep{deepseek-ai_deepseek-r1_2025} and Qwen2.5-Math-1.5B~\citep{qwen_qwen25_2025} students;
 both use the same cached teacher responses for SFT. Training uses slime
 with Megatron and SGLang at revision \texttt{a067ce6f}, with:
 \begin{itemize}
   \item seed: 1;
   \item Qwen3 experiments: DAPO17k~\citep{yu_dapo_2025}, maximum response length 2,048;
-  \item JustRL experiments: JustRL training data, maximum response length 8,192;
+  \item JustRL experiments: JustRL training data~\citep{he_justrl_2025}, maximum response length 8,192;
   \item learning rate: $10^{-5}$.
 \end{itemize}
 
