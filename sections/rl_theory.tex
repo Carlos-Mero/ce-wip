@@ -1,4 +1,4 @@
-\section{Distribution Drift of RL Target}
+\section{Conditional KL Regularization in RL}
 
 \subsection{Variance Accumulation in RL}
 
@@ -20,7 +20,7 @@ A sequence-level binary reward naturally decomposes the probability distribution
 
 \begin{lemma}[Accuracy-weighted entropy decomposition]
 \label{lem:rl-target-entropy}
-For a prompt $x$ with deterministic binary rewards, write $\rho=\rho_\theta(x)\in(0,1)$ for the accuracy and suppress conditioning on $x$. Let $H(\pi_\theta^+)$ and $H(\pi_\theta^-)$ denote the true (success-conditioned) and false (failure-conditioned) entropies, respectively. Then
+For a prompt $x$ with deterministic binary rewards, write $\rho=\rho_\theta(x)\in(0,1)$ for the accuracy and suppress conditioning on $x$. Let $H(\pi_\theta^+)$ and $H(\pi_\theta^-)$ denote the true conditional and false conditional entropies, respectively. Then
 \begin{equation}
  H(\pi_\theta)=h_{\mathrm b}(\rho)
     +\rho H(\pi_\theta^+)+(1-\rho)H(\pi_\theta^-),
@@ -79,6 +79,22 @@ Thus a detached reward $-\beta\widehat c_i$, with $\beta\ge0$, gives an expected
 \end{figure}
 
 As shown in Figure~\ref{fig:kl-ckl-comparison}, we indeed observe that CKL regularization effectively relaxes the constraint imposed by standard KL regularization on accuracy improvements while preserving the positive conditional entropy. Although CKL cannot achieve completely lossless regularization due to cross-sequence interactions induced by model parameterization, it nevertheless demonstrates substantial practical value.
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=\linewidth]{media/passk_comparison.pdf}
+  \caption{Pass@k performance of models trained with KL or CKL regularization on MATH500~\citep{lightman_lets_2023}, Apex2025~\citep{balunovic_matharena_2025} and AIME~\citep{balunovic_matharena_2025} datasets. More results can be found in Figure~\ref{fig:passk-eval-full}.}
+  \label{fig:passk-eval}
+\end{figure}
+
+We also evaluated these models on various test sets. As we can see in Figure~\ref{fig:passk-eval}, although on certain datasets such as Apex2025, the pass@k performance of the base model still surpasses the CKL regularized RL model, CKL still exhibit weaker collapse with higher accuracy compared with standard KL under the same control strength. This property still holds for up to 20 training epochs, as shown in Figure~\ref{fig:ext-ckl-cmp}.
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=\linewidth]{media/extended_conditional_kl_comparison.pdf}
+  \caption{Extended experiments on KL and CKL regularization. These experiments follows the same setting as that in Figure~\citep{fig:kl-ckl-comparison}. We can see that CKL-1 and KL-0.3 exhibits similar regularization ability on conditional distribution, while CKL-1 constantly obtains higher accuracy. Its entropy will thus be slightly lower according to the accuracy-weighted decomposition.}
+  \label{fig:ext-ckl-cmp}
+\end{figure}
 
 % We characterize this term for one SGD update of a frozen-feature softmax readout at a fixed prefix $s$. Write $p_i=\pi_{W_0}(i\mid s)$ and $\varepsilon=\eta\|\phi(s)\|_2^2$. For a token subset $\mathcal S$ with equal expected advantage $A_i=a>0$, let $P_{\mathcal S}=\sum_{i\in\mathcal S}p_i$ and $q_i=p_i/P_{\mathcal S}$. With deterministic binary token rewards, $\mathcal S$ can be the success set, so $q$ is the success-conditioned target and $a=1-P_{\mathcal S}$.
 %

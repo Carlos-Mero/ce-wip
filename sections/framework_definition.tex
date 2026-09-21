@@ -61,11 +61,15 @@ OPD recently emerged as a new algorithm for distillation tasks~\citep{thinking_m
   \label{eq:opd-loss}
 \end{align}
 
-The on policy nature of OPD directly come from the requirement of reverse KL divergence. As the expectation of reverse KL is calculated under the student distribution, we should use the student to generate samples. We should note that the sequence-level KL objective directly yields sampled-token OPD. While there exist several variants of this OPD~\citep{li_rethinking_2026}, this sampled-token OPD is indeed adopted by the industry~\citep{team_kimi_2026} and share some important properties with other variants. the following analysis will primarily be built upon this algorithm.
+% The on policy nature of OPD directly come from the requirement of reverse KL divergence. As the expectation of reverse KL is calculated under the student distribution, we should use the student to generate samples.
+
+We should note that the sequence-level KL objective directly yields sampled-token OPD. While there exist several variants of this OPD~\citep{li_rethinking_2026}, this sampled-token OPD is indeed adopted by the industry~\citep{team_kimi_2026} and share some important properties with other variants. the following analysis will primarily be built upon this algorithm.
 
 \subsection{Reinforce Learning Algorithms}
 
-All the algorithms methoned above has a clear definition of the target distribution. However, as another central component of post-training, Reinforcement Learning (RL) is not defined by such divergence. The objective of RL is to maximize the expected reward $r$ given to each possible action of the policy model, while for LLMs this action is typically a sequence generation. Its standard objective and gradient are~\citep{williams_simple_1992}:
+% All the algorithms methoned above has a clear definition of the target distribution. However, as another central component of post-training, Reinforcement Learning (RL) is not defined by such divergence.
+
+The objective of RL is to maximize the expected reward $r$ given to each possible action of the policy model, while for LLMs an action is typically a sequence generation. Its standard objective and gradient are~\citep{williams_simple_1992}:
 
 \begin{equation}
   \mathcal{J}_{\mathrm{RL}} = \mathbb{E}_{x\sim\mathcal{D}, y\sim\pi_\theta (\cdot\mid x)} [r(x, y)],\qquad \nabla_\theta \mathcal{J}_{\mathrm{RL}} = \mathbb{E}_{x\sim\mathcal{D}, y\sim\pi_\theta (\cdot\mid x)} [r(x, y) \nabla_\theta \log \pi_\theta].
@@ -115,7 +119,7 @@ $\pi_\theta^+$ by minimizing its forward KL to the current policy yields
 \end{theorem}
 \noindent\hyperref[app:conditional-kl-maxrl]{Proof: Appendix~\ref*{app:conditional-kl-maxrl}.}
 
-This actually gives the limit objective function of MaxRL algorithm, which is previously derived from the maximum likelihood estimator of the predictive accuracy~\citep{tajwar_maximum_2026}. It is believed to have some superior performance on maintaining the diversity of the distribution, and the standard RL objective is the first-order approximation of MaxRL.
+This actually gives the limit objective function of MaxRL algorithm, which is previously derived from the maximum likelihood estimator of the predictive accuracy~\citep{tajwar_maximum_2026}. It is believed to have some superior performance on maintaining the diversity of the distribution. The standard RL objective is the first-order approximation of MaxRL. They induce the same gradient direction for an individual sample, differing only in the average weighting assigned across samples. Since our subsequent analysis focuses on individual samples, the two methods are effectively equivalent in the properties relevant to our analysis.
 
 An auxiliary binary acceptance variable extends the conditional-KL identity to bounded nonbinary rewards on an augmented response space; Appendix~\ref{app:randomized-reward-extension} outlines this construction, while our main RL analysis remains focused on binary rewards.
 
