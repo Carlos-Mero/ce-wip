@@ -44,13 +44,13 @@ These experiments adopts these hyperparameter settings, while unmentioned ones u
   \item actor.optimizer.lr: 1e-6
   \item actor.reward\_scaling: 2.0
   \item actor.reward\_bias: -0.5
-  \item actor.kl\_estimator: "k1"
+  \item actor.kl\_estimator: ``k1''
 \end{itemize}
 
 
 \begin{figure}[htb]
   \centering
   \includegraphics[width=\linewidth]{media/passk_comparison_appendix.pdf}
-  \caption{Extended pass@k performance of models trained with KL or CKL regularization. CKL regularization also preserves more learning potential in the sense of pass@k performance compared with KL regularization with the same strength. The evaluation settings is the same as that used in AReaL training pipeline.}
+  \caption{Pass@k performance of models trained for 4 epochs with KL or CKL regularization on MATH500~\citep{lightman_lets_2023}, Apex2025~\citep{balunovic_matharena_2025}, arxivmath~\citep{balunovic_matharena_2025}, and AIME~\citep{balunovic_matharena_2025} datasets. CKL regularization also preserves more learning potential in the sense of pass@k performance compared with KL regularization with the same strength. The evaluation settings is the same as that used in AReaL training pipeline.}
   \label{fig:passk-eval-full}
 \end{figure}

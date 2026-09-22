@@ -33,7 +33,7 @@ If $H(\pi_\theta^+)<H(\pi_\theta^-)$, increasing accuracy while keeping both con
 
 In the practically relevant regime where both conditional entropies are much larger than the binary entropy $h_{\mathrm b}(\rho)\le\log 2$, the total entropy is well approximated by their accuracy-weighted average. This conditional is supported in our experiments, see Figure~\ref{fig:kl-ckl-comparison}. Both conditional entropies are significantly larger than the binary entropy, while false conditional entropy is several times higher than true conditional entropy.
 
-This property can, to some extent, account for the approximately linear relationship between entropy and accuracy observed in prior studies~\citep{cui_entropy_2025}. However, a mere shift in probability density is insufficient to explain the reductions in diversity and pass@k performance reported in other studies~\citep{yue_does_2025, tajwar_maximum_2026}. This accuracy-driven source of entropy reduction in RL need not reflect a loss of diversity among correct responses. The concern with diversity collapse is the degeneration of the success-conditioned target and conditional entropy. In RL, entropy is only compariable when models exhibit similar sample accuracy.
+This property can, to some extent, account for the approximately linear relationship between entropy and accuracy observed in prior studies~\citep{cui_entropy_2025}. However, a mere shift in probability density is insufficient to explain the reductions in diversity and pass@k performance reported in other studies~\citep{yue_does_2025, tajwar_maximum_2026}. This accuracy-driven source of entropy reduction in RL need not reflect a loss of diversity among correct responses. The concern with diversity collapse is the degeneration of the target and conditional entropy. In RL, entropy is only compariable when models exhibit similar sample accuracy.
 
 This conditional decomposition induced by RL training also offers a new perspective on regularization. To prevent model collapse and preserve generalization, a common practice is to introduce a KL-divergence constraint that keeps the trained model from deviating excessively from the original model~\citep{schulman_trust_2017, schulman_proximal_2017, ouyang_training_2022}. However, directly constraining the KL divergence can also limit improvements in reward. Under the conditional decomposition of RL, what we truly need to control is the degradation of the target distribution. This observation motivates a Conditional KL (CKL) regularization scheme that directly constrains changes in the target distribution.
 
@@ -67,7 +67,7 @@ the estimator satisfies, for every $n$ with $\Pr(N=n)>0$,
  =\frac{\max(n-1,0)}{G}\left.\nabla_\theta K(\theta)\right|_{\theta_0}.
  \label{eq:ckl-finite-gradient}
 \end{equation}
-Thus a detached reward $-\beta\widehat c_i$, with $\beta\ge0$, gives an expected policy-gradient contribution proportional to the negative success-conditioned KL gradient. The signal is invariant to adding a common constant to all successful responses' log-ratios.
+Thus a detached reward $-\beta\widehat c_i$, with $\beta\ge0$, gives an expected policy-gradient contribution proportional to the negative conditional KL gradient. The signal is invariant to adding a common constant to all successful responses' log-ratios.
 \end{theorem}
 \noindent\hyperref[app:ckl-estimator]{Proof: Appendix~\ref*{app:ckl-estimator}.}
 
@@ -82,18 +82,20 @@ As shown in Figure~\ref{fig:kl-ckl-comparison}, we indeed observe that CKL regul
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=\linewidth]{media/passk_comparison.pdf}
-  \caption{Pass@k performance of models trained with KL or CKL regularization on MATH500~\citep{lightman_lets_2023}, Apex2025~\citep{balunovic_matharena_2025} and AIME~\citep{balunovic_matharena_2025} datasets. More results can be found in Figure~\ref{fig:passk-eval-full}.}
-  \label{fig:passk-eval}
+  \includegraphics[width=\linewidth]{media/extended_conditional_kl_comparison.pdf}
+  \caption{Extended experiments on KL and CKL regularization. These experiments follows the same setting as that in Figure~\ref{fig:kl-ckl-comparison}. We can see that CKL-1 and KL-0.3 exhibits similar regularization ability on conditional distribution, while CKL-1 constantly obtains higher accuracy. Its entropy will thus be slightly lower according to the accuracy-weighted decomposition.}
+  \label{fig:ext-ckl-cmp}
 \end{figure}
 
-We also evaluated these models on various test sets. As we can see in Figure~\ref{fig:passk-eval}, although on certain datasets such as Apex2025, the pass@k performance of the base model still surpasses the CKL regularized RL model, CKL still exhibit weaker collapse with higher accuracy compared with standard KL under the same control strength. This property still holds for up to 20 training epochs, as shown in Figure~\ref{fig:ext-ckl-cmp}.
+% We also evaluated these models on various test sets. As we can see in Figure~\ref{fig:passk-eval}, although on certain datasets such as Apex2025, the pass@k performance of the base model still surpasses the CKL regularized RL model, CKL still exhibit weaker collapse with higher accuracy compared with standard KL under the same control strength.
+
+This advantage of CKL still holds for up to 20 training epochs, as shown in Figure~\ref{fig:ext-ckl-cmp}. We then evaluated these models on different math problem solving datasets, where CKL regularization did exhibit higher performance and generalizability over KL regularization, See Figure~\ref{fig:passk-eval}. More related results could be found in Figure~\ref{fig:passk-eval-full}.
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=\linewidth]{media/extended_conditional_kl_comparison.pdf}
-  \caption{Extended experiments on KL and CKL regularization. These experiments follows the same setting as that in Figure~\citep{fig:kl-ckl-comparison}. We can see that CKL-1 and KL-0.3 exhibits similar regularization ability on conditional distribution, while CKL-1 constantly obtains higher accuracy. Its entropy will thus be slightly lower according to the accuracy-weighted decomposition.}
-  \label{fig:ext-ckl-cmp}
+  \includegraphics[width=\linewidth]{media/passk_comparison_epoch20.pdf}
+  \caption{The comparison of pass@k performance on MATH500~\citep{lightman_lets_2023}, Apex Shortlist~\citep{balunovic_matharena_2025} and Apex2025~\citep{balunovic_matharena_2025}. Models are trained for 20 epochs on MATH dataset. We can see that models trained without KL has higher accuracy on datasets similar to the training set, while severe collapse occurs on harder datasets like Apex2025. CKL constantly achieves higher generalizability over KL regularization across these experiments.}
+  \label{fig:passk-eval}
 \end{figure}
 
 % We characterize this term for one SGD update of a frozen-feature softmax readout at a fixed prefix $s$. Write $p_i=\pi_{W_0}(i\mid s)$ and $\varepsilon=\eta\|\phi(s)\|_2^2$. For a token subset $\mathcal S$ with equal expected advantage $A_i=a>0$, let $P_{\mathcal S}=\sum_{i\in\mathcal S}p_i$ and $q_i=p_i/P_{\mathcal S}$. With deterministic binary token rewards, $\mathcal S$ can be the success set, so $q$ is the success-conditioned target and $a=1-P_{\mathcal S}$.
