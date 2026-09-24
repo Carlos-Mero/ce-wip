@@ -1,7 +1,7 @@
 \section{Conditional KL Regularization in RL}
 
 \begin{insight}
-  In iterative algorithms, the target distribution helps separate intended gains from unintended side effects. For example, RL aims to maximize expected reward. With binary rewards, conditioning on $r(x,y)=1$ yields the training target $\pi_\theta^+$, which remains unchanged under the ideal update in \hyperref[lem:reward-reweighting]{Theorem~\ref*{lem:reward-reweighting}}. Tracking how this target changes during training can therefore reveal side effects beyond the intended reward improvement.
+  In iterative algorithms, the target distribution helps separate intended gains from unintended side effects. For example, RL aims to maximize expected reward. With binary rewards, conditioning on $r(x,y)=1$ yields the training target $\pi_\theta^+$, which remains unchanged under the ideal update in Theorem~\ref{lem:reward-reweighting}. Tracking how this target changes during training can therefore reveal side effects beyond the intended reward improvement.
 \end{insight}
 
 \subsection{Conditional Decomposition in RL}
