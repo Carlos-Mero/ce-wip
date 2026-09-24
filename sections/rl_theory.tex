@@ -1,22 +1,12 @@
 \section{Conditional KL Regularization in RL}
 
-\subsection{Variance Accumulation in RL}
-
-While the entropy collapse is widely observed in RL scenarios, previous experiments could provide certain evidence that the variance accumulation is one of the major causes of this phenomena in RL. Another important side evidence of the variance impact in RL is the advantage estimation methods adopted in PPO~\citep{schulman_proximal_2017}, GRPO~\citep{shao_deepseekmath_2024}, or RLOO~\citep{ahmadian_back_2024}. These methods can significantly lower down the variance of the estimator in RL algorithms while maintaining the expectation form objective. This can notably increase the stability of LLM training, while our deduction further indicates that they are can also prevent potential entropy collapse of the target distribution. It remains open if we could find better methods in controling the estimattion variance.
-
-% TODO Ablation experiments on advantage estimation methods.
-\begin{figure}[htb]
-  \centering
-  \includegraphics[width=\linewidth]{media/conditional_kl_comparison.pdf}
-  \caption{Ablation study on the impact of advantage estimation methods. We can see that under the same RL setting, advantage estimation methods constantly lowers the entropy deduction, while the accuracy on the training set is not severely affected during these training steps.}
-  \label{fig:ablation-ae-rl}
-\end{figure}
-
-Iterative self-distillation and RL share some properties as iterative learning algorithms, while RL still exhibit some other unique behavior which we can work on. In this section we will primarily study the property of RL with binary reward.
+\begin{insight}
+  In iterative algorithms, the target distribution helps separate intended gains from unintended side effects. For example, RL aims to maximize expected reward. With binary rewards, conditioning on $r(x,y)=1$ yields the training target $\pi_\theta^+$, which remains unchanged under the ideal update in \hyperref[lem:reward-reweighting]{Theorem~\ref*{lem:reward-reweighting}}. Tracking how this target changes during training can therefore reveal side effects beyond the intended reward improvement.
+\end{insight}
 
 \subsection{Conditional Decomposition in RL}
 
-A sequence-level binary reward naturally decomposes the probability distribution induced by the original model into two components, with the success-conditioned distribution serving as the target distribution. The policy entropy also decomposes into the binary entropy of correctness and an accuracy-weighted average of the true and false conditional entropies.
+A sequence-level binary reward naturally decomposes the probability distribution induced by the original model into two components, with the true conditional distribution serving as the target distribution. The policy entropy also decomposes into the binary entropy of correctness and an accuracy-weighted average of the true and false conditional entropies.
 
 \begin{lemma}[Accuracy-weighted entropy decomposition]
 \label{lem:rl-target-entropy}
@@ -31,11 +21,13 @@ If $H(\pi_\theta^+)<H(\pi_\theta^-)$, increasing accuracy while keeping both con
 \end{lemma}
 \noindent\hyperref[app:rl-target-entropy]{Proof: Appendix~\ref*{app:rl-target-entropy}.}
 
-In the practically relevant regime where both conditional entropies are much larger than the binary entropy $h_{\mathrm b}(\rho)\le\log 2$, the total entropy is well approximated by their accuracy-weighted average. This conditional is supported in our experiments, see Figure~\ref{fig:kl-ckl-comparison}. Both conditional entropies are significantly larger than the binary entropy, while false conditional entropy is several times higher than true conditional entropy.
+Typically in practice, both conditional entropies are much larger than the binary entropy $h_{\mathrm b}(\rho)\le\log 2$, the total entropy is well approximated by their accuracy-weighted average. This conditional is supported in our experiments, see Figure~\ref{fig:kl-ckl-comparison}. Both conditional entropies are significantly larger than the binary entropy, while false conditional entropy is usually several times higher than true conditional entropy.
 
-This property can, to some extent, account for the approximately linear relationship between entropy and accuracy observed in prior studies~\citep{cui_entropy_2025}. However, a mere shift in probability density is insufficient to explain the reductions in diversity and pass@k performance reported in other studies~\citep{yue_does_2025, tajwar_maximum_2026}. This accuracy-driven source of entropy reduction in RL need not reflect a loss of diversity among correct responses. The concern with diversity collapse is the degeneration of the target and conditional entropy. In RL, entropy is only compariable when models exhibit similar sample accuracy.
+This property can, to some extent, account for the approximately linear relationship between entropy and accuracy observed in prior studies~\citep{cui_entropy_2025}. However, a mere shift in probability density is insufficient to explain the reductions in diversity and pass@k performance reported in other studies~\citep{yue_does_2025, tajwar_maximum_2026}. This accuracy-driven source of entropy reduction in RL need not reflect a loss of diversity among correct responses. The concern with diversity collapse is the degeneration of the target and conditional entropy.
 
-This conditional decomposition induced by RL training also offers a new perspective on regularization. To prevent model collapse and preserve generalization, a common practice is to introduce a KL-divergence constraint that keeps the trained model from deviating excessively from the original model~\citep{schulman_trust_2017, schulman_proximal_2017, ouyang_training_2022}. However, directly constraining the KL divergence can also limit improvements in reward. Under the conditional decomposition of RL, what we truly need to control is the degradation of the target distribution. This observation motivates a Conditional KL (CKL) regularization scheme that directly constrains changes in the target distribution.
+% In RL, entropy is only compariable when models exhibit similar sample accuracy.
+
+This conditional decomposition induced by RL also offers a new perspective on regularization. To prevent model collapse and preserve generalization, a common practice is to introduce a KL-divergence constraint that keeps the trained model from deviating excessively from the original model~\citep{schulman_trust_2017, schulman_proximal_2017, ouyang_training_2022}. However, directly constraining the KL divergence can also limit improvements in reward. Under the conditional decomposition of RL, what we truly need to control is the degradation of the target distribution. This observation motivates a Conditional KL (CKL) regularization scheme that directly constrains changes in the target distribution.
 
 This CKL regularization admits a simple policy-gradient estimator:
 
@@ -50,10 +42,10 @@ $K(\theta)=D_{\mathrm{KL}}(\pi_\theta^+\Vert\pi_{\mathrm{ref}}^+)$.
 Draw $G$ independent responses $Y_i\sim\pi_{\theta_0}$, and let
 $I^+=\{i:r(x,Y_i)=1\}$ and $N=|I^+|$. The empirical signal is
 \begin{align}
- d_i&=\log\frac{\pi_{\theta_0}(Y_i)}{\pi_{\mathrm{ref}}(Y_i)}
- =\sum_t\log\frac{\pi_{\theta_0}(Y_{i,t}\mid x,Y_{i,<t})}
-                        {\pi_{\mathrm{ref}}(Y_{i,t}\mid x,Y_{i,<t})},\notag\\
- \widehat c_i&=
+  d_i=\log\frac{\pi_{\theta_0}(Y_i)}{\pi_{\mathrm{ref}}(Y_i)}
+%  =\sum_t\log\frac{\pi_{\theta_0}(Y_{i,t}\mid x,Y_{i,<t})}{\pi_{\mathrm{ref}}(Y_{i,t}\mid x,Y_{i,<t})}
+  ,\notag\qquad
+  \widehat c_i =
  \begin{cases}
  d_i-\dfrac{1}{N}\sum_{j\in I^+}d_j,&i\in I^+,\ N\ge2,\\
  0,&\text{otherwise}.
@@ -67,7 +59,7 @@ the estimator satisfies, for every $n$ with $\Pr(N=n)>0$,
  =\frac{\max(n-1,0)}{G}\left.\nabla_\theta K(\theta)\right|_{\theta_0}.
  \label{eq:ckl-finite-gradient}
 \end{equation}
-Thus a detached reward $-\beta\widehat c_i$, with $\beta\ge0$, gives an expected policy-gradient contribution proportional to the negative conditional KL gradient. The signal is invariant to adding a common constant to all successful responses' log-ratios.
+Thus a detached reward $-\beta\widehat c_i$, with $\beta\ge0$, gives an expected policy-gradient contribution proportional to the negative conditional KL gradient.
 \end{theorem}
 \noindent\hyperref[app:ckl-estimator]{Proof: Appendix~\ref*{app:ckl-estimator}.}
 
@@ -78,27 +70,27 @@ Thus a detached reward $-\beta\widehat c_i$, with $\beta\ge0$, gives an expected
   \label{fig:kl-ckl-comparison}
 \end{figure}
 
-As shown in Figure~\ref{fig:kl-ckl-comparison}, we indeed observe that CKL regularization effectively relaxes the constraint imposed by standard KL regularization on accuracy improvements while preserving the positive conditional entropy. Although CKL cannot achieve completely lossless regularization due to cross-sequence interactions induced by model parameterization, it nevertheless demonstrates substantial practical value.
-
-\begin{figure}[htb]
+\begin{figure}[!htb]
   \centering
   \includegraphics[width=\linewidth]{media/extended_conditional_kl_comparison.pdf}
   \caption{Extended experiments on KL and CKL regularization. These experiments follows the same setting as that in Figure~\ref{fig:kl-ckl-comparison}. We can see that CKL-1 and KL-0.3 exhibits similar regularization ability on conditional distribution, while CKL-1 constantly obtains higher accuracy. Its entropy will thus be slightly lower according to the accuracy-weighted decomposition.}
   \label{fig:ext-ckl-cmp}
 \end{figure}
 
+As shown in Figure~\ref{fig:kl-ckl-comparison}, we indeed observe that CKL effectively relaxes the constraint imposed by standard KL regularization on accuracy improvements while preserving the true conditional entropy. Although CKL cannot achieve completely lossless regularization due to cross-sequence interactions induced by model parameterization, it nevertheless demonstrates substantial practical value.
+
 % We also evaluated these models on various test sets. As we can see in Figure~\ref{fig:passk-eval}, although on certain datasets such as Apex2025, the pass@k performance of the base model still surpasses the CKL regularized RL model, CKL still exhibit weaker collapse with higher accuracy compared with standard KL under the same control strength.
 
-This advantage of CKL still holds for up to 20 training epochs, as shown in Figure~\ref{fig:ext-ckl-cmp}. We then evaluated these models on different math problem solving datasets, where CKL regularization did exhibit higher performance and generalizability over KL regularization, See Figure~\ref{fig:passk-eval}. More related results could be found in Figure~\ref{fig:passk-eval-full}.
+This advantage of CKL still holds for up to 20 training epochs, as shown in Figure~\ref{fig:ext-ckl-cmp}. We then evaluated these models on different math datasets, where CKL regularization did exhibit higher performance and generalizability over KL of similar strength, See Figure~\ref{fig:passk-eval}. More related results could be found in Section~\ref{app:rl-exps}.
 
-\begin{figure}[htb]
+\begin{figure}[!htb]
   \centering
   \includegraphics[width=\linewidth]{media/passk_comparison_epoch20.pdf}
   \caption{The comparison of pass@k performance on MATH500~\citep{lightman_lets_2023}, Apex Shortlist~\citep{balunovic_matharena_2025} and Apex2025~\citep{balunovic_matharena_2025}. Models are trained for 20 epochs on MATH dataset. We can see that models trained without KL has higher accuracy on datasets similar to the training set, while severe collapse occurs on harder datasets like Apex2025. CKL constantly achieves higher generalizability over KL regularization across these experiments.}
   \label{fig:passk-eval}
 \end{figure}
 
-% We characterize this term for one SGD update of a frozen-feature softmax readout at a fixed prefix $s$. Write $p_i=\pi_{W_0}(i\mid s)$ and $\varepsilon=\eta\|\phi(s)\|_2^2$. For a token subset $\mathcal S$ with equal expected advantage $A_i=a>0$, let $P_{\mathcal S}=\sum_{i\in\mathcal S}p_i$ and $q_i=p_i/P_{\mathcal S}$. With deterministic binary token rewards, $\mathcal S$ can be the success set, so $q$ is the success-conditioned target and $a=1-P_{\mathcal S}$.
+% We characterize this term for one SGD update of a frozen-feature softmax readout at a fixed prefix $s$. Write $p_i=\pi_{W_0}(i\mid s)$ and $\varepsilon=\eta\|\phi(s)\|_2^2$. For a token subset $\mathcal S$ with equal expected advantage $A_i=a>0$, let $P_{\mathcal S}=\sum_{i\in\mathcal S}p_i$ and $q_i=p_i/P_{\mathcal S}$. With deterministic binary token rewards, $\mathcal S$ can be the success set, so $q$ is the true conditional target and $a=1-P_{\mathcal S}$.
 %
 % \begin{lemma}[First-order concentration under REINFORCE]
 % \label{lem:rl-conditional-drift}

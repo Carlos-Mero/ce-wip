@@ -55,7 +55,7 @@ Table~\ref{tab:distillation-performance}.}
 
 \begin{table}[htbp]
 \centering
-\caption{Evaluation results of OPD and SFT with 16 sampled responses per problem. We can see that OPD typically outperforms SFT in proximal distillation, while it may experience severe instability issue in distal distillation.}
+\caption{Evaluation results of OPD and SFT with 16 sampled responses per problem. We can see that OPD typically outperforms SFT in proximal distillation, while it may experience severe instability issue and performance degradation in distal distillation. Proximal teachers are obtained by training the base model with GRPO for 50, 100, or 200 steps.}
 \label{tab:distillation-performance}
 \vspace{5pt}
 \begingroup
@@ -116,16 +116,43 @@ Table~\ref{tab:distillation-performance}.}
 \endgroup
 \end{table}
 
-\subsection{Comparision with Iterative Methods}
+% \subsection{Comparision with Iterative Methods}
+%
+% Figure~\ref{fig:distillation-proximal-limit} shows zero recorded gradient
+% norm for both OPD runs and nonzero sampled gradients for SFT, consistent
+% with Lemma~\ref{lem:proximal-gradient-noise}. Neither iterative self-OPD
+% nor proximal SFT exhibits entropy collapse.
+%
+% \begin{figure}[htbp]
+%   \centering
+%   \includegraphics[width=\linewidth]{media/distillation_comparison.pdf}
+%   \caption{Additional results on the training dynamics of different self-distillation variants. We can see that neither iterative self-OPD nor proximal SFT experienced entropy collapse. These experiments were conducted on Qwen3-1.7B-Base with a learning rate of $10^{-5}$ with AdamW optimizer.}
+%   \label{fig:distillation-proximal-limit}
+% \end{figure}
+\subsection{Supplimentary Experiments on Standard and Reversed Iterative Self-Distillation}\label{app:supp-exp-isd}
 
-Figure~\ref{fig:distillation-proximal-limit} shows zero recorded gradient
-norm for both OPD runs and nonzero sampled gradients for SFT, consistent
-with Lemma~\ref{lem:proximal-gradient-noise}. Neither iterative self-OPD
-nor proximal SFT exhibits entropy collapse.
+Here are some supplimentary experiments on two iterative self-distillation methods mentioned in the main body, See Figure~\ref{fig:supp-exp-isd}.
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{media/distillation_comparison.pdf}
-  \caption{ The training dynamics of different self-distillation variants. We can see that neither iterative self-OPD nor proximal SFT experienced entropy collapse. The nonzero proximal variance and iteration are two necessasy conditions for variance accumulation to occur. RL is where both conditions are satisfied. These experiments were conducted on Qwen3-1.7B-Base with a learning rate of $10^{-5}$ with AdamW optimizer.}
-  \label{fig:distillation-proximal-limit}
+\begin{figure}[htb]
+\centering
+\includegraphics[width=\linewidth]{media/entropy_comparison_ISD.pdf}
+\caption{Additional experiments on entropy dynamics of iterative self-distillation and reversed iterative self-distillation. In the legend ``N'' denotes the number of samples per request, ``B'' denotes batchsize and ``lr'' denotes the learning rate of SGD optimizer.}
+\label{fig:supp-exp-isd}
 \end{figure}
+
+In a single training step, model entropy may randomly increase or decrease, but over the long run it exhibits a deterministic downward trend in expectation. These entropy curves satisfies the derivation in the main body very well. In fact the decreasing expected entropy does not guarantee the probability of decrement and increment. For example in reversed iterative self-distillation, since the punishment on samples with a high probability will raise the entropy, the entropy policy model has a high probability to be increased. However, the negative expectation indicates that once the decrement happens, the magnitude of the decrease will be substantial. This was also observed in our experiments.
+
+These experiments share these experimental settings:
+
+\begin{itemize}
+\item seed: 1
+\item total\_train\_epochs: 2
+\item actor.path: Qwen/Qwen3-1.7B-Base
+\item dataset: openai/gsm8k
+\item actor.dtype: bfloat16
+\item actor.kl\_ctl: 0
+\item actor.optimizer.type: sgd
+\item actor.optimizer.momentum: 0
+\end{itemize}
+
+Other hyperparameters are kept the same as the default value of AReaL, which can be found in our codebase.

@@ -6,13 +6,12 @@ When student and teacher coincide, every OPD log-ratio weight is zero,
 whereas the sampled KD scores cancel only in expectation.
 \end{insight}
 
-For Lemma~\ref{lem:proximal-gradient-noise}, fix a prompt $x$, a finite
-response space $\mathcal Y_x$, and a positive teacher $\pi_t$ independent
-of $\theta$. Assume $\pi_\theta(y\mid x)>0$ is continuously differentiable
-on a neighborhood of $\theta_0$, with $\pi_{\theta_0}=\pi_t$.
+Fix a prompt $x$, a finite response space, and a fixed positive teacher
+$\pi_t$. Let $\pi_\theta>0$ be continuously differentiable near
+$\theta_0$, with $\pi_{\theta_0}=\pi_t$.
 Write $s_\theta(y\mid x)=\nabla_\theta\log\pi_\theta(y\mid x)$ and
 $w_\theta(y\mid x)=\log[\pi_t(y\mid x)/\pi_\theta(y\mid x)]$.
-For $m\ge1$ independent samples from the respective distributions, define
+For $m\ge1$, define the sampled-response estimators
 \begin{align}
  \widehat g_{\mathrm{KD}}(\theta)
  &=\frac1m\sum_{i=1}^m s_\theta(Y_i\mid x),
@@ -24,12 +23,9 @@ For $m\ge1$ independent samples from the respective distributions, define
  &\widetilde Y_i&\overset{\mathrm{iid}}{\sim}\pi_\theta(\cdot\mid x).
  \label{eq:proximal-opd-estimator}
 \end{align}
-The sampled responses and OPD weights are detached during the score update.
 
-\begin{proof}
-For every $\theta$, the score identity gives
-$\mathbb E_{\pi_\theta}[s_\theta]=\nabla_\theta\sum_y\pi_\theta(y\mid x)=0$.
-Hence the per-prompt gradients of the negative-KL objectives are
+\begin{proof}[Proof of Lemma~\ref{lem:proximal-gradient-noise}]
+Since $\mathbb E_{\pi_\theta}[s_\theta]=\nabla_\theta\sum_y\pi_\theta(y\mid x)=0$,
 \begin{align}
  \nabla_\theta[-D_{\mathrm{KL}}(\pi_t\Vert\pi_\theta)]
  &=\mathbb E_{\pi_t}[s_\theta],
@@ -39,48 +35,30 @@ Hence the per-prompt gradients of the negative-KL objectives are
  =\mathbb E_{\pi_\theta}[w_\theta s_\theta],
  \label{eq:proximal-opd-gradient}
 \end{align}
-proving unbiasedness. At $\theta_0$, $w_{\theta_0}(y\mid x)=0$ for
-every response, so each OPD summand vanishes. Meanwhile,
-$\mathbb E_{\pi_t}[s_{\theta_0}]=0$; sample independence yields
+so both estimators are unbiased. At $\theta_0$, $w_{\theta_0}=0$ and
+$\mathbb E_{\pi_t}[s_{\theta_0}]=0$. Therefore
+$\widehat g_{\mathrm{OPD}}(\theta_0)=0$ almost surely, while independence gives
 \begin{equation}
  \operatorname{Cov}(\widehat g_{\mathrm{KD}}(\theta_0))
  =\frac1m\mathbb E_{\pi_t}[s_{\theta_0}s_{\theta_0}^{\top}]
  =\frac1m F_x(\theta_0).
  \label{eq:app-proximal-fisher}
 \end{equation}
-Consequently, $\mathbb E\|\widehat g_{\mathrm{KD}}(\theta_0)\|_2^2
-=\operatorname{Tr}F_x(\theta_0)/m>0$ whenever the Fisher trace is positive.
-This implies positive probability of a nonzero KD estimate, rather than
-nonzero estimates for every possible batch.
-\end{proof}
-
-\paragraph{A neighborhood of the limit.}
-For $A\in\{\mathrm{KD},\mathrm{OPD}\}$, define the estimation error
+For $A\in\{\mathrm{KD},\mathrm{OPD}\}$, set
 $V_A(\theta)=\mathbb E\|\widehat g_A(\theta)
 -\mathbb E\widehat g_A(\theta)\|_2^2$.
-The finite-sum expressions
+Then
 \begin{align}
  mV_{\mathrm{KD}}(\theta)
  &=\mathbb E_{\pi_t}\|s_\theta\|_2^2
        -\|\mathbb E_{\pi_t}s_\theta\|_2^2,\nonumber\\
  mV_{\mathrm{OPD}}(\theta)
  &=\mathbb E_{\pi_\theta}[w_\theta^2\|s_\theta\|_2^2]
-       -\|\mathbb E_{\pi_\theta}[w_\theta s_\theta]\|_2^2
+       -\|\mathbb E_{\pi_\theta}[w_\theta s_\theta]\|_2^2.
  \label{eq:proximal-estimation-error}
 \end{align}
-are continuous. Since $V_{\mathrm{OPD}}(\theta_0)=0$ and
-$V_{\mathrm{KD}}(\theta_0)=\operatorname{Tr}F_x(\theta_0)/m$,
-a positive Fisher trace implies $V_{\mathrm{OPD}}<V_{\mathrm{KD}}$
-throughout some neighborhood of $\theta_0$.
-
-\paragraph{Estimator scope.}
-The zero-noise conclusion uses the log-ratio estimator in
-\eqref{eq:proximal-opd-estimator}: retaining the zero-mean score term
-$-s_\theta$ in \eqref{eq:proximal-opd-gradient} gives another unbiased
-estimator, but it need not vanish samplewise at the limit. Likewise,
-exact teacher-distribution cross-entropy, including full-vocabulary KD at
-each sampled prefix, has zero gradient when teacher and student coincide.
-The comparison concerns sampled-response KD, with a fixed teacher and
-unmodified sampling distributions. Averaging independent prompt-response
-pairs over the fixed $\mathcal D$ preserves the limit result, replacing
-$F_x$ by $\mathbb E_{x\sim\mathcal D}F_x$ when equality holds for every prompt.
+These finite sums are continuous in $\theta$. If
+$\operatorname{Tr}F_x(\theta_0)>0$, then
+$V_{\mathrm{OPD}}(\theta_0)=0<V_{\mathrm{KD}}(\theta_0)$, so the strict
+inequality persists in a neighborhood of $\theta_0$.
+\end{proof}

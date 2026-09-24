@@ -2,14 +2,7 @@
 
 \subsection{Pre-Training And Distillation Algorithms}
 
-In pre-training and Supervised Fine-Tuning (SFT), minimizing the standard
-cross-entropy loss is equivalent to minimizing the forward KL divergence
-from the data distribution to the model distribution.
-To make this precise, let $\mathcal{D}=\{x^{(i)}\}_{i=1}^N$ be a fixed,
-nonempty dataset of token sequences, let
-$p_{\mathcal{D}}(x)=N^{-1}\sum_{i=1}^N\mathbf{1}\{x^{(i)}=x\}$ be its
-empirical distribution, and let $\pi_\theta(x)$ be the model probability
-of sequence $x$ with parameter $\theta$. Then
+In pre-training and Supervised Fine-Tuning (SFT), minimizing the standard cross-entropy loss is equivalent to minimizing the forward KL divergence from the data distribution to the model distribution. To make this precise, let $\mathcal{D}=\{x^{(i)}\}_{i=1}^N$ be a fixed, nonempty dataset of token sequences, let $p_{\mathcal{D}}(x)=N^{-1}\sum_{i=1}^N\mathbf{1}\{x^{(i)}=x\}$ be its empirical distribution, and let $\pi_\theta(x)$ be the model probability of sequence $x$ with parameter $\theta$. Then
 
 \begin{align}
  D_{\mathrm{KL}}(p_{\mathcal{D}}\Vert\pi_\theta)
@@ -20,15 +13,9 @@ of sequence $x$ with parameter $\theta$. Then
  \label{eq:ce-forward-kl}
 \end{align}
 
-Here the empirical cross-entropy loss is
-$\mathcal{L}_{\mathrm{CE}}(\theta)=-N^{-1}\sum_{i=1}^N
-\log\pi_\theta(x^{(i)})$.
-The data entropy $H(p_{\mathcal{D}})=-\mathbb{E}_{x\sim p_{\mathcal{D}}}
-[\log p_{\mathcal{D}}(x)]$ is finite and independent of $\theta$ which has no effect on the gradient. This proves the equivalence.
+Here the data entropy $H(p_{\mathcal{D}})=-\mathbb{E}_{x\sim p_{\mathcal{D}}} [\log p_{\mathcal{D}}(x)]$ is finite and independent of $\theta$ which has no effect on the gradient. This proves the equivalence.
 
-For SFT, let $x$ denote a prompt and $y$ its target response, with fixed
-empirical joint distribution $p_{\mathcal{D}}(x,y)$. The same decomposition
-holds conditionally:
+For SFT, let $x$ denote a prompt and $y$ its target response, with fixed empirical joint distribution $p_{\mathcal{D}}(x,y)$. The same decomposition holds conditionally:
 
 \begin{align}
   \mathcal{L}_{\mathrm{SFT}}(\theta) &= 
@@ -76,6 +63,8 @@ The objective of RL is to maximize the expected reward $r$ given to each possibl
   \label{eq:std-rfalgo}
 \end{equation}
 
+Modern reinforcement learning algorithms such as PPO~\citep{schulman_proximal_2017} and GRPO~\citep{shao_deepseekmath_2024} additionally introduce various methods, including advantage estimation and importance sampling techniques, to better achieve stable training, but they are essentially optimizing the same training objective.
+
 % In this work we will show that RL algorithms can also be expressed in the form of distribution matching objective under 0-1 reward, and the analysis on the target distribution can further reveal some interesting properties of these algorithms.
 
 In fact, this objective also implicitly introduces a target distribution. We first characterize an ideal policy update that improves expected reward
@@ -97,16 +86,16 @@ conditional distribution.
 \end{theorem}
 \noindent\hyperref[app:reward-reweighting]{Proof: Appendix~\ref*{app:reward-reweighting}.}
 
-Under binary rewards, we can verify that this update preserves the success-conditioned distribution
+Under binary rewards, we can verify that this update preserves the true conditional distribution
 $\pi_\theta^+(\cdot\mid x)
 =\pi_\theta(\cdot\mid x,r(x,y)=1)$. If we use this distribution as the training target, matching
 this conditional distribution with the forward KL gives the following identity.
 
 \Needspace{9\baselineskip}
-\begin{theorem}[Success-conditioned KL and the MaxRL limit]
+\begin{theorem}[True conditional KL and the MaxRL]
 \label{lem:conditional-kl-maxrl}
 Let $\rho_\theta(x)=\mathbb E_{y\sim\pi_\theta(\cdot\mid x)}[r(x,y)]$
-denote the success probability. Matching the success-conditioned target
+denote the success probability. Matching the true conditional target
 $\pi_\theta^+$ by minimizing its forward KL to the current policy yields
 \begin{equation}
  -\mathbb E_{x\sim\mathcal D}
@@ -141,7 +130,7 @@ $^{\dagger}$\,RL is its first-order approximation.}
 \setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{1.45}
 \begin{tabularx}{\linewidth}{
- >{\raggedright\arraybackslash}p{0.13\linewidth}
+ >{\raggedright\arraybackslash}p{0.15\linewidth}
  >{\centering\arraybackslash}X
  >{\centering\arraybackslash}p{0.235\linewidth}
  >{\raggedright\arraybackslash}p{0.16\linewidth}}
@@ -180,8 +169,8 @@ $\displaystyle\targetpolicy^+=\frac{r(x,y)\targetpolicy(y\mid x)}{\rho_\theta(x)
 \endgroup
 \end{table}
 \FloatBarrier
-
-Table~\ref{tab:distribution-matching} summarizes these algorithms through
-their objectives and target distributions.
+%
+% Table~\ref{tab:distribution-matching} summarizes these algorithms through
+% their objectives and target distributions.
 
 % In the following sections we will primarily study the property of these algorithms under different conditions, with a focus on KD, OPD and RL with binary reward.

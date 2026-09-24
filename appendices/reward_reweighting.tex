@@ -8,21 +8,18 @@ Responses with the same reward receive the same multiplier, which cancels
 when conditioning on a reward level set.
 \end{insight}
 
-For Theorem~\ref{lem:reward-reweighting}, fix $x$, a finite nonempty
-$\mathcal Y_x$, $p_y=\pi_\theta(y\mid x)>0$, a real-valued reward
-$r_y=r(x,y)$, and $\beta>0$. Optimization is over the probability simplex,
-independently of model parametrization.
+Fix a prompt $x$ and a finite response space. Write
+$p_y=\pi_\theta(y\mid x)>0$, $r_y=r(x,y)\in\mathbb R$, and $\beta>0$.
 
-\begin{proof}
-The objective
+\begin{proof}[Proof of Theorem~\ref{lem:reward-reweighting}]
+On the probability simplex,
 \begin{equation}
  F(q)=\sum_yq_yr_y-\beta D_{\mathrm{KL}}(p\Vert q)
  \label{eq:app-reward-forward-objective}
 \end{equation}
-is strictly concave, with Hessian
-$-\beta\operatorname{diag}(p_y/q_y^2)$, and tends to $-\infty$ at the
-boundary. Its unique maximizer is therefore interior. The Lagrange
-multiplier $\lambda_x$ for $\sum_yq_y=1$ gives
+has Hessian $-\beta\operatorname{diag}(p_y/q_y^2)\prec0$ and tends
+to $-\infty$ at the boundary. Its unique maximizer is interior, with
+Lagrange conditions
 \begin{equation}
  r_y+\frac{\beta p_y}{q_y}-\lambda_x=0
  \quad\Longrightarrow\quad
@@ -30,10 +27,9 @@ multiplier $\lambda_x$ for $\sum_yq_y=1$ gives
  \sum_y\frac{\beta p_y}{\lambda_x-r_y}=1.
  \label{eq:app-reward-forward-stationarity}
 \end{equation}
-On $(\max_y r_y,\infty)$, the last sum decreases continuously from
-$+\infty$ to $0$, uniquely determining $\lambda_x$ and proving
-\eqref{eq:reward-reciprocal-tilt}. For any nonempty reward level set
-$\mathcal S_a=\{y:r_y=a\}$, the multiplier cancels:
+The normalization sum decreases continuously from $+\infty$ to $0$
+on $(\max_y r_y,\infty)$, determining a unique $\lambda_x$.
+For any nonempty $\mathcal S_a=\{y:r_y=a\}$,
 \begin{equation}
  q^*(y\mid\mathcal S_a)
  =\frac{p_y\beta/(\lambda_x-a)}
@@ -44,17 +40,15 @@ $\mathcal S_a=\{y:r_y=a\}$, the multiplier cancels:
 \end{proof}
 
 \paragraph{Binary rewards.}
-For $r_y\in\{0,1\}$ and $0<\rho_\theta(x)<1$, success and failure
-probabilities are multiplied by $\beta/(\lambda_x-1)$ and
-$\beta/\lambda_x$, respectively. Equivalently,
+For $r_y\in\{0,1\}$ and $0<\rho_\theta(x)<1$, the same solution is
 \begin{equation}
  q_y^*=\frac{p_y e^{\alpha_xr_y}}
  {1-\rho_\theta(x)+\rho_\theta(x)e^{\alpha_x}},
  \qquad \alpha_x=\log\frac{\lambda_x}{\lambda_x-1}>0.
  \label{eq:app-reward-binary-tilt}
 \end{equation}
-Hence success mass increases and $\pi_\theta^+$ is preserved.
-If all rewards coincide, $q^*=p$.
+Thus $q^*(\mathcal S_1)>\rho_\theta(x)$ and $(q^*)^+=\pi_\theta^+$.
+For constant rewards, $q^*=p$.
 
 \paragraph{KL constraint.}
 Set $\delta_\beta=D_{\mathrm{KL}}(p\Vert q^*)$.
@@ -65,9 +59,4 @@ For any $q$ with $D_{\mathrm{KL}}(p\Vert q)\le\delta_\beta$, optimality gives
  \le\mathbb E_{q^*}[r],
  \label{eq:app-reward-constrained}
 \end{equation}
-with equality only at $q=q^*$. Conversely, for a positive budget,
-$p$ is strictly feasible; a positive KL multiplier gives the same
-regularized solution. Zero budget forces $q=p$, while a zero multiplier
-or a saturated reward optimum need not give a unique constrained solution.
-Conditional preservation is thus a property of this regularized update,
-not of unrestricted reward maximization.
+with equality only at $q=q^*$.

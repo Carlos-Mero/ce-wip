@@ -1,16 +1,12 @@
 \section{Variance Accumulation in Iterative Algorithms}\label{sec:variance-accumulation}
 
-\begin{insight}
-  In iterative algorithms, the target distribution helps separate intended gains from unintended side effects. For example, RL aims to maximize expected reward. With binary rewards, conditioning on $r(x,y)=1$ yields the training target $\pi_\theta^+$, which remains unchanged under the ideal update in \hyperref[lem:reward-reweighting]{Theorem~\ref*{lem:reward-reweighting}}. Tracking how this target changes during training can therefore reveal side effects beyond the intended reward improvement.
-\end{insight}
-
 Distillation algorithms have a fixed target distribution for the student to fit. Although we have showed in \hyperref[lem:reward-reweighting]{Theorem~\ref*{lem:reward-reweighting}}, the ideal single-step update of RL or MaxRL with binary reward will not affect the target distribution, this property may not hold in real applications. One important reason is that, there are non-negligible random noise in the one optimization step. This could be caused by the empirical estimator of the objective, the approximation of the optimizer and the numerical precision of the model parameter.
 
 In this section we study \emph{variance accumulation} in iterative training and its relation to the observed entropy dynamics, starting from the gradient noise in self-distillation.
 
 \subsection{Iterative Self-Distillation}
 
-We start from \emph{iterative self-distillation}: each step samples responses from the current model and increases their log-likelihood, treating the sampling distribution as fixed during differentiation. This is the uncentered RL update with reward $1$ for every response, and coincides with sampled-response SFT at the proximal limit. The distinction is that, in SFT at the proximal limit, the target distribution is fixed as $\pi_t = \pi_{\theta_0}$, whereas in iterative self-distillation the target distribution is $\displaystyle\targetpolicy$ which updates with the current policy.
+We start from \emph{iterative self-distillation}: each step samples responses from the current model and fits this empirical distribution. This is equivalent to an uncentered RL update with reward $1$ for every response, and coincides with sampled-response SFT at the proximal limit each step. The distinction is that, in SFT at the proximal limit, the target distribution is fixed as $\pi_t = \pi_{\theta_0}$, whereas in iterative self-distillation the target distribution is $\displaystyle\targetpolicy$ which updates with the current policy.
 
 %Unlike SFT, the teacher is replaced by the updated student after each step. This is also the common practice adopted by RL algorithms.
 
@@ -28,8 +24,8 @@ For iterative self-distillation with step size $\eta_k$, the parameters form a m
 \end{equation}
 \end{lemma}
 \noindent\hyperref[app:variance-accumulation]{Proof: Appendix~\ref*{app:variance-accumulation}.}
-
-The martingale property also yields an entropy decrease when entropy is locally concave along the updates.
+%
+% The martingale property also yields an entropy decrease when entropy is locally concave along the updates.
 
 \begin{theorem}[Conditional decrease of expected entropy]
 \label{lem:self-distillation-entropy}
@@ -38,7 +34,7 @@ Let $h_x(\theta)=H(\pi_\theta(\cdot\mid x))$. If $h_x$ is concave along every po
  \mathbb E[H(\pi_{k+1})\mid\mathcal F_k]\le H(\pi_k).
  \label{eq:self-distillation-entropy}
 \end{equation}
-The inequality is strict under nonzero conditional update variance. If these conditions hold at each step, expected entropy decreases over training.
+The inequality is strict under nonzero conditional update variance.
 \end{theorem}
 \noindent\hyperref[app:variance-accumulation]{Proof: Appendix~\ref*{app:variance-accumulation}.}
 
@@ -46,16 +42,38 @@ Thus sampling noise can deterministicly reduce expected entropy even when the pa
 
 This expectational decrease of entropy should be understood in this way: We have no guarantee on the deterministic direction of entropy in each step. If one training step happens to generate some samples with low probability, self-distillation on these samples will actually increase the sample entropy. So this is not contradictive with previous researches that carefully analyzed the condition when a single learning step will increase or decrease the entropy~\citep{cui_entropy_2025, ren_learning_2025, jin_revisiting_2026, wang_entropy_2026}. This result in fact takes a step further, and answers if we are doing the update multiple times, or in the long-term of training, how should the entropy change on average. The long-term expectation cancels the randomness in a single step update, and gives a deterministic decrement.
 
-% TODO Empirical results on iterative self-distillation
-
 \subsection{Reversed Iterative Self-Distillation}
 
-The empirical results of iterative self-distillation is somehow not very surprising, since we can easily make another explanation: the sequence with higher probability are more likely to be sampled and strengthened, naturally resulting in a sharpened distribution. This is often used to explain the entropy collapse in RL~\citep{cui_entropy_2025, hao_rethinking_2026}. This is an intuitive explanation that treats the entropy collapse as a property of the expectation form RL algorithm rather than empirical variance accumulation.
+A common explanation for entropy collapse in large-model training is that high-probability samples are more likely to be sampled, and further increasing their probabilities leads to an additional reduction in entropy~\citep{cui_entropy_2025, hao_rethinking_2026}. This interpretation is consistent with our findings. In fact, the expected entropy decrease established by Theorem~\ref{eq:self-distillation-entropy} further shows that, although low-probability samples may occasionally be sampled and increase the entropy during training, such increases are, in expectation, dominated by the overall decreasing trend.
 
-To further distinguish the potential cause, we designed reversed iterative self-distillation experiments, where these two explanations could give contradictive predictions, and our experiments support the counter-intuitive one.
+To further illustrate this phenomenon, we additionally conduct a reversed iterative self-distillation experiment. In this setting, we assign a reward of $-1$ to all samples. As a result, high-probability samples are also more likely to be penalized, thereby tending to increase the entropy. Nevertheless, after reversing the sign of the objective, it still retains the properties of zero mean and nonzero variance, and the expected entropy decrease predicted by Theorem~\ref{eq:self-distillation-entropy} continues to hold. This is a relatively counterintuitive result. It further predicts that the rare entropy-decreasing events under such training should be particularly pronounced, which is indeed what we observe empirically, as shown in Figure~\ref{fig:distillation-comp}. More results can be found in Section~\ref{app:supp-exp-isd}.
 
-The reversed iterative self-distillation is achieved by setting all rewards in self-distillation to -1. Hence we are pushing down the probability of every sequence generated by the policy model, and the sequence with higher sample probability will receive more punishment. If we accept the common explanation on the entropy dynamics in LLM training, this would flatten the sample distribution and increase the sample entropy of the policy model.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\linewidth]{media/distillation_comparison.pdf}
+  \caption{The comparision of the entropy dynamics of distillation algorithms. The nonzero variance and iteration are two necessasy conditions for variance accumulation to occur. RL is where both conditions are satisfied.}
+  \label{fig:distillation-comp}
+\end{figure}
 
-However, changing the training direction in self-distillation do not affact the zero mean gradient, and hence the martingale property in \hyperref[lem:self-distillation-martingale]{Theorem~\ref*{lem:self-distillation-martingale}} still holds. Then with the same derivation as \hyperref[lem:self-distillation-entropy]{Lemma~\ref*{lem:self-distillation-entropy}}, the variance accumulation will also guatantee a decrement of sample entropy in expectation.
+% The empirical results of iterative self-distillation is somehow not very surprising, since we can easily make another explanation: the sequence with higher probability are more likely to be sampled and strengthened, naturally resulting in a sharpened distribution. This is often used to explain the entropy collapse in RL~\citep{cui_entropy_2025, hao_rethinking_2026}. This is an intuitive explanation that treats the entropy collapse as a property of the expectation form RL algorithm rather than empirical variance accumulation.
+%
+% To further distinguish the potential cause, we designed reversed iterative self-distillation experiments, where these two explanations could give contradictive predictions, and our experiments support the counter-intuitive one.
+%
+% The reversed iterative self-distillation is achieved by setting all rewards in self-distillation to $-1$. Hence we are pushing down the probability of every sequence generated by the policy model, and the sequence with higher sample probability will receive more punishment. If we accept the common explanation on the entropy dynamics in LLM training, this would flatten the sample distribution and increase the sample entropy of the policy model.
+%
+% However, changing the training direction in self-distillation do not affact the zero mean gradient, and hence the martingale property in \hyperref[lem:self-distillation-martingale]{Theorem~\ref*{lem:self-distillation-martingale}} still holds. Then with the same derivation as \hyperref[lem:self-distillation-entropy]{Lemma~\ref*{lem:self-distillation-entropy}}, the variance accumulation will also guatantee a decrement of sample entropy in expectation.
 
 % TODO Empirical results on reversed iterative self-distillation
+
+\subsection{Variance Accumulation in RL}
+
+While the entropy collapse is widely observed in RL scenarios, previous experiments could provide certain evidence that the variance accumulation is also one of the main causes of this phenomena in RL. Another important side evidence of the variance impact in RL is the advantage estimation methods adopted in PPO~\citep{schulman_proximal_2017}, GRPO~\citep{shao_deepseekmath_2024}, or RLOO~\citep{ahmadian_back_2024}. These methods can effectively lower down the variance of the estimator in RL algorithms. This notably increases the stability of RL training, while our deduction further indicates that they are can also prevent potential entropy collapse of the target distribution. It remains open if we could find better methods in controling the estimattion variance.
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\linewidth]{media/qwen3_4b_ae_ablation.pdf}
+  \caption{Ablation study on the impact of advantage estimation methods. We can see that under the same RL setting, advantage estimation methods constantly lowers the entropy deduction. Although they eventually achieved similar reward on the training set, to some extent, lower entropy still reflects reduced diversity and weaker generalization ability.}
+  \label{fig:ablation-ae-rl}
+\end{figure}
+%
+% Iterative self-distillation and RL share some properties as iterative learning algorithms, while RL still exhibit some other unique behavior which we can work on. In this section we will primarily study the property of RL with binary reward.
